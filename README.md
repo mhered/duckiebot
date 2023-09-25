@@ -17,7 +17,7 @@ I plugged the bot and tried to power it up - Note: using the side button in the 
 
 The robot wouldn't boot. The LEDs lit up in odd colours, but the screen didn't work. After a while I noticed the fan in the Jetson would start to power up briefly and then power down again.
 
-[Handling instructions in the docs](https://docs.duckietown.com/daffy/opmanual-duckiebot/operations/handling/db21.html#handling-duckiebot-db21) were not fully straight forward. After searching the docs and Slack, I came to the conclusion that the battery was totally drained and followed the advice in [the docs FAQ](https://docs.duckietown.com/daffy/opmanual-duckiebot/debugging_and_troubleshooting/faq/index.html) and in [Slack](https://stackoverflowteams.com/c/duckietown/a/230/1434) to unplug the HUT cables going to motors and Jetson, and letting only the cables needed to charge the battery for 5+ hours.
+[Handling instructions in the docs](https://docs.duckietown.com/daffy/opmanual-duckiebot/operations/handling/db21.html#handling-duckiebot-db21) were not fully self explanatory. After searching the docs and Slack, I came to the conclusion that the battery was totally drained and followed the advice in [the docs FAQ](https://docs.duckietown.com/daffy/opmanual-duckiebot/debugging_and_troubleshooting/faq/index.html) and in [Slack](https://stackoverflowteams.com/c/duckietown/a/230/1434) to unplug the HUT cables going to motors and Jetson, and letting only the cables needed to charge the battery for 5+ hours.
 
 ![](./assets/charging_battery.jpg)
 
@@ -38,7 +38,7 @@ To be continued...
 
 After the whole night charging, I tried again but the booting process did not complete. There was no blinking of the wifi dongle and when I plugged in a screen to see what was going on the screen froze with a Nvidia logo.
 
-I assumed at some point the SD card got corrupted - perhaps one of the times when I forcefully unplugged the Jetson...
+I assumed at some point the SD card got corrupted - perhaps when it attempted to boot and run out of battery or one of the times when I forcefully unplugged the Jetson...
 
 ## Software
 
@@ -68,10 +68,7 @@ Set up the apt repo containing Docker
 
 ```bash
 $ sudo apt-get update
-$ sudo apt-get install \
-    ca-certificates \
-    curl \
-    gnupg
+$ sudo apt-get install ca-certificates curl gnupg
 ```
 
 Add the official GPG key
@@ -100,11 +97,13 @@ $ sudo apt-get install docker-compose
 
 Add the current user to the `docker` user group
 
-```
-sudo adduser `whoami` docker
+```bash
+$ sudo adduser `whoami` docker
 ```
 
-Important: **restart** for the change to take effect
+Note: I had to **restart** for this change to take effect
+
+Checkpoint (should be docker version > v1.4.0 and `buildx` version > v.0.8.0):
 
 ```bash
 $ docker --version
@@ -112,8 +111,6 @@ Docker version 24.0.6, build ed223bc
 $ docker buildx version
 github.com/docker/buildx v0.11.2 9872040
 ```
-
-It is ok if docker version is > v1.4.0 and `buildx` version > v.0.8.0
 
 Test docker:
 
@@ -153,9 +150,10 @@ Set version to `daffy` :
 $ dts --set-version daffy
 Duckietown Shell (v5.5.10)
 INFO:dts:Configured dts to version: daffy
+...
 ```
 
-Log in to [Duckietown](https://hub.duckietown.com/profile/) with the Github user, copy the Duckitown token and pass it to `dts` with:
+Log in to [Duckietown](https://hub.duckietown.com/profile/) with the Github user, copy the Duckietown token and pass it to `dts` with:
 
 ```bash
 $ dts tok set
@@ -220,11 +218,13 @@ INFO:dts:Docker credentials:
 	  secret:   ****************
 ```
 
-Note: Duckietown and dts credentials are stored unencrypted in `~/.dt-shell/config.yaml`
+Note: Duckietown and DockerHub credentials are stored unencrypted in `~/.dt-shell/config.yaml`
 
 Note: repeat this process if a new access token needs to be generated. 
 
 ### Flash SD card
+
+Tried and failed to read or format the SD (both in Ubuntu and Windows) until I came to the conclusion if was fried and bought a new one.
 
 The GUI failed to launch with a page not found error (why?):
 
@@ -246,11 +246,41 @@ dts :  To report a bug, please also include the contents of /home/mhered/shell-d
 So I used the CLI:
 
 ```bash
-$ dts init_sd_card --hostname patobot --type duckiebot --configuration DB21M --wifi HUAWEI:***********h8 --country ES
+$ dts init_sd_card --hostname patobot --type duckiebot --configuration DB21M --wifi MY_WIFI:MY_PWD --country ES
 ```
 
-Accept 3rd party licenses, indicate SD size (32) and select the proper device.
+The CLI will ask to accept 3rd party licenses, request the SD size (32) and ask to select the device to be flashed (in my case `/dev/sda/` WARNING!! Be careful you could wipe your hard drive).
 
-The process involves 3 steps: download, flash and verify and took 2h? (started at 21:30)
+Then there are 3 long steps: download took 2-3h, then flash 30' and verify.
 
-Default username and password are `duckie` and `quackquack`
+Default username and password in case you need to log in manually:  `duckie` / `quackquack`
+
+### Update 25/09/23
+
+I flashed a new SD card and put it in the duckiebot, and finally managed to get it to boot: wifi dongle flashing, LEDs go white and the bot screen powers up. Battery was showing at 0% in the screen so I plugged it in.
+
+The bot was not detected by dts:
+
+```bash
+$ dts fleet discover
+
+NOTE: Only devices flashed using duckietown-shell-commands v4.1.0+ are supported.
+
+ | Type | Model |  Status  | Hostname
+ | ---- | ----- | -------- | --------
+
+```
+
+First I realised the network configuration was incorrect, which I fixed plugging the SD in the laptop, opening a terminal in folder `/etc/`  (inside the SD) and manually editing the config file `$ sudo nano wpa_supplicant.conf`, see
+
+Still didn't work so I plugged a screen to the bot and noticed many messages similar to `tegra-i2c 7000c700.i2c no acknowledge from address 0x50`. One potential explanation is apparently that [there are peripherals incorrectly powered](https://forums.developer.nvidia.com/t/tegra-i2c-7000c400-i2c-no-acknowledge-from-address-0x3c/196035/3). This together with the 0% battery indication made me decide to leave the bot charging overnight (to be honest I doubt the battery would be healthy and I have actually cycled it a few times since the last charge). Note duckietown stack overflow offers many other explanations to these messages (including unplugged cables, a faulty Jetson, etc.)
+
+While at it, this is apparently [the proper sequence to power up](https://stackoverflowteams.com/c/duckietown/questions/208):
+
+1. Get to a stable starting state: cable to both the first and last  ports of the HUT are pulled out, battery has been charging for more than an hour, known good SD card has been inserted into the nano
+2. Unplug the charger cable from the charger and/or the HUT
+3. Plug in the cable to the first and last ports of the HUT
+4. Depress the button on the battery once
+5. Wait till the wifi dongle is blinking and depress the dashboard button on top of the robot once
+
+To be continued...
