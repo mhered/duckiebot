@@ -271,9 +271,9 @@ NOTE: Only devices flashed using duckietown-shell-commands v4.1.0+ are supported
 
 ```
 
-First I realised the network configuration was incorrect, which I fixed plugging the SD in the laptop, opening a terminal in folder `/etc/`  (inside the SD) and manually editing the config file `$ sudo nano wpa_supplicant.conf`, see
+First I realised the network configuration was incorrect, which I fixed plugging the SD in the laptop, opening a terminal in folder `/etc/`  (inside the SD) and manually editing the config file `$ sudo nano wpa_supplicant.conf`, see [here](https://docs.duckietown.com/daffy/opmanual-duckiebot/debugging_and_troubleshooting/network_config/index.html#duckiebot-network)
 
-Still didn't work so I plugged a screen to the bot and noticed many messages similar to `tegra-i2c 7000c700.i2c no acknowledge from address 0x50`. One potential explanation is apparently that [there are peripherals incorrectly powered](https://forums.developer.nvidia.com/t/tegra-i2c-7000c400-i2c-no-acknowledge-from-address-0x3c/196035/3). This together with the 0% battery indication made me decide to leave the bot charging overnight (to be honest I doubt the battery would be healthy and I have actually cycled it a few times since the last charge). Note duckietown stack overflow offers many other explanations to these messages (including unplugged cables, a faulty Jetson, etc.)
+Still didn't work so I plugged a screen to the bot and noticed many messages similar to `tegra-i2c 7000c700.i2c no acknowledge from address 0x50`. One potential explanation is apparently that [there are peripherals incorrectly powered](https://forums.developer.nvidia.com/t/tegra-i2c-7000c400-i2c-no-acknowledge-from-address-0x3c/196035/3). This together with the 0% battery indication made me decide to leave the bot charging overnight (to be honest I doubt the battery would be healthy and I have actually cycled it a few times since the last charge). Note [Duckietown Stack Overflow](https://stackoverflowteams.com/c/duckietown/questions) offers many other explanations to these messages (including unplugged cables, a faulty Jetson, etc.)
 
 While at it, this is apparently [the proper sequence to power up](https://stackoverflowteams.com/c/duckietown/questions/208):
 
