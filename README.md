@@ -9,7 +9,7 @@ It seems that the version I own is the [DB21M](https://docs.duckietown.com/daffy
 
 ## Power up
 
-The first challenge was charging the battery after two years in order to power up the bot.
+The first challenge was charging the battery - after two years of inactivity - in order to power up the bot.
 
 I plugged the bot and tried to power it up - Note: using the side button in the battery, not the button at the top which is only to power down. 
 
@@ -17,7 +17,7 @@ I plugged the bot and tried to power it up - Note: using the side button in the 
 
 The robot wouldn't boot. The LEDs lit up in odd colours, but the screen didn't work. After a while I noticed the fan in the Jetson would start to power up briefly and then power down again.
 
-[Handling instructions in the docs](https://docs.duckietown.com/daffy/opmanual-duckiebot/operations/handling/db21.html#handling-duckiebot-db21) were not fully self explanatory. After searching the docs and Slack, I came to the conclusion that the battery was totally drained and followed the advice in [the docs FAQ](https://docs.duckietown.com/daffy/opmanual-duckiebot/debugging_and_troubleshooting/faq/index.html) and in [Slack](https://stackoverflowteams.com/c/duckietown/a/230/1434) to unplug the HUT cables going to motors and Jetson, and letting only the cables needed to charge the battery for 5+ hours.
+[Handling instructions in the docs](https://docs.duckietown.com/daffy/opmanual-duckiebot/operations/handling/db21.html#handling-duckiebot-db21) were not fully self-explanatory. After searching the docs and Slack, I came to the conclusion that the battery was totally drained and followed the advice in [the docs FAQ](https://docs.duckietown.com/daffy/opmanual-duckiebot/debugging_and_troubleshooting/faq/index.html) and in [Slack](https://stackoverflowteams.com/c/duckietown/a/230/1434) to unplug the HUT cables going to motors and Jetson, and letting only the cables needed to charge the battery for 5+ hours.
 
 ![](./assets/charging_battery.jpg)
 
@@ -33,8 +33,6 @@ Note: USB cables from left to right
 4. to motors and LEDs
 
 Unplug 3 from the mains when the battery is charged then connect cables in this order: 2 - 4 -1 (cfr steps 65-67 of the [assembly instructions](https://docs.duckietown.com/daffy/opmanual-duckiebot/assembly/db21m/index.html#howto-power-db21m))
-
-To be continued...
 
 After the whole night charging, I tried again but the booting process did not complete. There was no blinking of the wifi dongle and when I plugged in a screen to see what was going on the screen froze with a Nvidia logo.
 
@@ -283,6 +281,73 @@ While at it, this is apparently [the proper sequence to power up](https://stacko
 4. Depress the button on the battery once
 5. Wait till the wifi dongle is blinking and depress the dashboard button on top of the robot once
 
+After all the night charging battery shows 24%. Boot works but does not connect. Wifi dongle blinking in cycles of 11 blinks(?) then pause. 
+
+Next steps to troubleshoot connection:
+
+- [x] connect with Ethernet cable directly to router then ssh
+- [ ] Connect directly to the bot via keyboard
+
+### Connection via Ethernet
+
+I connected via ethernet and now I am able to ssh into the bot:
+
+```bash
+$ ssh duckie@patobot.local
+duckie@patobot.local's password: 
+Welcome to Ubuntu 18.04.5 LTS (GNU/Linux 4.9.140-tegra aarch64)
+...
+```
+
+And `$ dts fleet discover` works:
+
+![](./assets/fleet_discover.png)
+
+Even the dashboard worked (at least briefly) and allowed me see the camera feed and to login with the token following [the documentation](https://docs.duckietown.com/daffy/opmanual-duckiebot/setup/setup_dashboard/index.html)
+
+I concluded it was a Wifi configuration issue. Upon inspection of `/etc/wpa_supplicant.conf` bam! I had a typo in the SSID.
+
+I restarted and it works: ssh and fleet discover work over Wifi.
+
+The remaining question is why Dashboard stopped working...
+
+I think it may be related to me  clicking somewhere in the dashboard to upgrade compose...
+
+Troubleshooting ideas: 
+
+- [x] Try to connect directly to the IP address is http://192.168.8.116 > did not work but  http://192.168.8.116:9000/#/home takes me to portainer ?!
+
+- [ ] I realised I missed the duckiebot software update step in https://docs.duckietown.com/daffy/opmanual-duckiebot/debugging_and_troubleshooting/update/index.html#duckiebot-autoupdate
+
+This could explain that: 
+
+* fleet discover does NOT show the dashboard status
+* Stack Overflow refers to there is some mDNS topics, see https://feeding.cloud.geek.nz/posts/upgrading-from-ubuntu-bionic-to-focal/ but seem old
+
+I was so smart as to start the `$ dts duckiebot update patobot` with 0% battery - battery does not seem to charge above 24% and it drains fast - and of course the bot died on me halfway the software update. Let's hope I didn't make matters worse.
+
+An update sequence / troubleshoot checklist from [my own question years ago](https://stackoverflowteams.com/c/duckietown/questions/1835):
+
+* [ ] dts software is updated to the latest version by running:
+  * [x] `$ dts update`
+  * [x] `$ dts desktop update`
+  * [x] `$ dts duckiebot update patobot` (needs robot)
+
+- [x] Robot is reachable via `$ ping patobot.local`
+- [x] Robot is reachable via `$ ssh duckie@patobot.local`
+- [x] Robot is visible through `$ dts fleet discover`
+  - [ ] ...and Dashboard is UP
+- [x] The dashboard is operational in http://patobot.local :
+  - [ ] I can see signal from camera, motors, and all health stats
+  - [ ] portainer shows X containers, Y healthy and Z running
+
+- [ ] The robot is operational:
+
+  - I can move the robot with `$ dts duckiebot keyboard_control patobot` [[+](https://docs.duckietown.com/daffy/opmanual-duckiebot/operations/make_it_move/index.html)]
+
+  - I can stream camera with `$ dts start_gui_tools patobot`and then from inside docker: `[DOCKER]$ rqt_image_view` [[+](https://docs.duckietown.com/daffy/opmanual-duckiebot/operations/make_it_see/index.html)]
+
 To be continued...
 
-After all the night charging battery shows 24%. Boot works but does not connect. Wifi dongle blinking in cycles of 11 blinks(?) then pause. 
+
+
